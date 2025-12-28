@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: enviro-governance-db
+    environment:
+      POSTGRES_USER: enviro_user
+      POSTGRES_PASSWORD: enviro_password
+      POSTGRES_DB: enviro_governance
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enviro_user -d enviro_governance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: enviro-governance-backend
+    environment:
+      DATABASE_URL: postgresql://enviro_user:enviro_password@postgres:5432/enviro_governance
+      LOG_LEVEL: INFO
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+
+volumes:
+  postgres_data:
